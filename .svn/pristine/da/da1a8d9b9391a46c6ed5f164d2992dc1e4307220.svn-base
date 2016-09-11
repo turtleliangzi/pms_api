@@ -1,0 +1,7 @@
+<?php
+
+// Project Controller Routes
+
+$api->post('/project/add', 'Project\ProjectController@add');
+$api->get('/project/get/{kind}', 'Project\ProjectController@unaudited');
+$api->post('/project/audit', 'Project\ProjectController@audit');

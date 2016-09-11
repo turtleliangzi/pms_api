@@ -1,0 +1,22 @@
+<?php
+
+namespace App;
+
+use DB;
+use Mail;
+
+class Sendmail {
+    /*
+     * 发送邮件
+     * @author turtle
+     * createtime 2016-08-03
+     */
+    public static function sendMail() {
+        $data = ['email'=>'turtle@anasit.com', 'name'=>'turtle', 'uid'=>1, 'activationcode'=>'12334'];
+        Mail::send('email.mailview', $data, function($message) use($data) {
+            $message->from('info@anasit.com', '江西安纳斯信息科技有限公司');
+            $message->to($data['email'], $data['name'])->subject('欢迎注册我们的网站，请激活您的账号！');
+            $message->to('1639672490@qq.com', 'turtle')->subject('欢迎注册我们的网站，请激活您的账号！');
+        });
+    }
+}

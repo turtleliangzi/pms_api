@@ -1,0 +1,199 @@
+<?php
+
+namespace App\Api\V1\Controllers\Company;
+
+use App\Api\V1\Controllers\BaseController;
+use App\Company;
+use App\User;
+use DB;
+use Illuminate\Http\Request;
+use Swagger\Annotations as SWG;
+use App\Api\V1\Transformers\CompanyTransformer;
+use Illuminate\Support\Arr;
+
+
+class CompanyController extends BaseController {
+
+    /** 
+     * @SWG\Post(
+     * path="/company/add",
+     * summary="新建公司",
+     * tags={"Companys"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="company_name", in="query", required=true, description="公司名", type="string"),
+     * @SWG\Parameter(name="english_name", in="query", required=true, description="英文名", type="string"),
+     * @SWG\Parameter(name="founder", in="query", required=true, description="创始人", type="integer"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="创建公司成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="创建公司失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function add(Request $request) {
+        $company = array(
+            'company_name' => htmlspecialchars($request->get('company_name')),
+            'english_name' => htmlspecialchars($request->get('english_name')),
+            'founder' => (integer)($request->get('founder')), 
+        );
+        $company['company_code'] = $company['english_name']."-".mt_rand(10000,99999);
+        if (empty($company['company_name'])) {
+            return $this->errorResponse("公司名不能为空", 406);
+        }
+        if (empty($company['english_name'])) {
+            return $this->errorResponse("英文名不能为空", 406);
+        }
+        if (empty($company['founder'])) {
+            return $this->errorResponse("创始人不能为空", 406);
+        }
+
+        $userExist = User::find($company['founder']);
+        if (empty($userExist)) {
+            return $this->errorResponse("该创始人不存在", 406);
+        }
+
+        $result = Company::create($company);
+        if (!empty($result)) {
+            $user['company'] = $result['company_code'];
+            DB::table('users')->where('id', $company['founder'])->update($user);
+            return $this->successResponse("创建公司成功", 200);
+        } else {
+            return $this->errorResponse("创建公司失败", 500);
+        }
+
+    }
+
+
+    /** 
+     * @SWG\Post(
+     * path="/company/join",
+     * summary="加入公司",
+     * tags={"Companys"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="company_code", in="query", required=true, description="公司代号", type="string"),
+     * @SWG\Parameter(name="member", in="query", required=true, description="加入成员", type="integer"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="加入公司成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="加入公司失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function join(Request $request) {
+        $company = array(
+            'company' => htmlspecialchars($request->get('company_code'))
+        );
+        $uid = (integer)($request->get('member'));
+        if (empty($company['company'])) {
+            return $this->errorResponse("公司代号不能为空", 406);
+        }
+        if (empty($uid)) {
+            return $this->errorResponse("加入成员不能为空", 406);
+        }
+
+        $companyExist = Company::findCompany($company['company']);
+        if (empty($companyExist)) {
+            return $this->errorResponse("该公司不存在", 406);
+        }
+
+        $userExist = User::find($uid);
+        if (empty($userExist)) {
+            return $this->errorResponse("该成员不存在", 406);
+        }
+
+        $result = DB::table('users')->where('id', $uid)->update($company);
+        if ($result) {
+            return $this->successResponse("加入公司成功", 200);
+        } else {
+            return $this->errorResponse("加入公司失败", 500);
+        }
+
+    }
+
+
+    /** 
+     * @SWG\Get(
+     * path="/company/info/{company_code}",
+     * summary="获取公司信息",
+     * tags={"Companys"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="company_code", in="path", required=true, description="公司代号", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="获取公司信息成功"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function info($company_code) {
+        $company_code = htmlspecialchars($company_code);
+        if (empty($company_code)) {
+            return $this->errorResponse("公司代号不能为空", 406);
+        }
+        $companyInfo = Company::findCompany($company_code);
+        $company = Company::all();
+        if (empty($companyInfo)) {
+            return $this->errorResponse("该公司不存在", 406);
+        } else {
+            return $this->response->item($companyInfo, new CompanyTransformer);
+        
+        }
+    }
+
+}

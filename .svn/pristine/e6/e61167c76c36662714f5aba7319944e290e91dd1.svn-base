@@ -1,0 +1,343 @@
+<?php
+
+namespace App\Api\V1\Controllers\Department;
+
+use App\Api\V1\Controllers\BaseController;
+use App\Department;
+use App\Company;
+use App\User;
+use App\DepartmentMember;
+use DB;
+use Illuminate\Http\Request;
+use Swagger\Annotations as SWG;
+use App\Api\V1\Transformers\DepartmentTransformer;
+
+
+class DepartmentController extends BaseController {
+
+    /** 
+     * @SWG\Post(
+     * path="/department/add",
+     * summary="新建部门",
+     * tags={"Departments"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="department_name", in="query", required=true, description="公司名", type="string"),
+     * @SWG\Parameter(name="department_desc", in="query", required=false, description="部门描述", type="string"),
+     * @SWG\Parameter(name="department_creator", in="query", required=true, description="部门创建者", type="string"),
+     * @SWG\Parameter(name="company", in="query", required=true, description="所在公司代号", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="创建部门成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="创建部门失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function add(Request $request) {
+        $department = array(
+            'department_name' => htmlspecialchars($request->get('department_name')),
+            'department_desc' => htmlspecialchars($request->get('department_desc')),
+            'department_creator' => htmlspecialchars($request->get('department_creator')),
+           'company' => htmlspecialchars($request->get('company')),
+        );
+        if (empty($department['department_name'])) {
+            return $this->errorResponse("部门名不能为空", 406);
+        }
+        if (empty($department['department_creator'])) {
+            return $this->errorResponse("创建人不能为空", 406);
+        }
+        if (empty($department['company'])) {
+            return $this->errorResponse("所属公司不能为空", 406);
+        }
+
+        $companyExist = Company::findCompany($department['company']);
+        if (empty($companyExist)) {
+            return $this->errorResponse("所属公司不存在", 406);
+        }
+
+        $result = Department::create($department);
+        if (!empty($result)) {
+            return $this->successResponse("创建部门成功", 200);
+        } else {
+            return $this->errorResponse("创建部门失败", 500);
+        }
+
+    }
+
+
+    /** 
+     * @SWG\Get(
+     * path="/department/one/info/{company}/{department_id}",
+     * summary="单个部门信息",
+     * tags={"Departments"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="department_id", in="path", required=true, description="部门id", type="integer"),
+     * @SWG\Parameter(name="company", in="path", required=true, description="公司代号", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="获取单个部门信息成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="获取单个部门信息失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function oneInfo($company, $department_id) {
+        $department_id = (integer)($department_id);
+        $company = htmlspecialchars($company);
+        if (empty($company)) {
+            return $this->errorResponse("公司代号不能为空", 406);
+        }
+        if (empty($department_id)) {
+            return $this->errorResponse("部门id不能为空", 406);
+        }
+
+        $department = Department::findById($department_id);
+        if ($department['company'] != $company) {
+            return $this->errorResponse("对不起，非法访问", 406);
+        }
+        return $this->response->item($department, new DepartmentTransformer);
+
+    }
+
+    /** 
+     * @SWG\Post(
+     * path="/department/add/member",
+     * summary="部门新增成员",
+     * tags={"Departments"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="department", in="query", required=true, description="部门id", type="integer"),
+     * @SWG\Parameter(name="email", in="query", required=true, description="成员邮箱", type="integer"),
+     * @SWG\Parameter(name="company", in="query", required=true, description="公司代号", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="部门新增成员成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="部门新增成员失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function addMember(Request $request) {
+        $department = array(
+            'department' => (integer)($request->get('department')),
+        );
+        $email = htmlspecialchars($request->get('email'));
+        $company = htmlspecialchars($request->get('company'));
+
+        if (empty($email)) {
+            return $this->errorResponse("用户邮箱不能为空", 406);
+        }
+        if (empty($department['department'])) {
+            return $this->errorResponse("部门id不能为空", 406);
+        }
+        if (empty($company)) {
+            return $this->errorResponse("公司代号不能为空", 406);
+        }
+
+        $departmentExist = Department::findById($department['department']);
+        if (empty($departmentExist)) {
+            return $this->errorResponse("公司下的该部门不存在", 406);
+        } else {
+            if ($departmentExist['company'] != $company) {
+                return $this->errorResponse("对不起，非法访问", 406);
+            }
+        }
+        $userInfo = User::findUserEmail($email);
+        if (empty($userInfo)) {
+            return $this->errorResponse("该用户邮箱不存在", 406);
+        } else {
+            $department['user'] = $userInfo['id'];
+        }
+        $department['create_time'] = date("Y-m-d H:i:s");
+        $department['update_time'] = date("Y-m-d H:i:s");
+
+        $rs = DB::table('department_member')->insert($department);
+        if ($rs) {
+            return $this->successResponse("部门新增成员成功", 200);
+        } else {
+            return $this->errorResponse("部门新增成员失败", 500);
+        }
+
+    }
+
+    /** 
+     * @SWG\Get(
+     * path="/department/all/info/{company}/{uid}",
+     * summary="获取公司下所有部门信息",
+     * tags={"Departments"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="company", in="path", required=true, description="公司代号", type="string"),
+     * @SWG\Parameter(name="uid", in="path", required=true, description="成员id", type="integer"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="获取所有部门信息成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="获取所有部门信息失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function allInfo($company, $uid) {
+        $id = (integer)($uid);
+        $company = htmlspecialchars($company);
+
+        if (empty($id)) {
+            return $this->errorResponse("用户id不能为空", 406);
+        }
+        if (empty($company)) {
+            return $this->errorResponse("公司代号不能为空", 406);
+        }
+        
+        $user = User::find($id);
+        if (empty($user)) {
+            return $this->errorResponse("请求用户不存在", 406);
+        } else {
+            if ($user['company'] != $company) {
+                return $this->errorResponse("对不起，非法访问", 406);
+            }
+        }
+        
+        $departments = Department::all();
+        return $this->response->collection($departments, new DepartmentTransformer);
+
+    }
+
+    /** 
+     * @SWG\Get(
+     * path="/department/member/department/{company}/{uid}",
+     * summary="获取用户所在部门",
+     * tags={"Departments"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="company", in="path", required=true, description="公司代号", type="string"),
+     * @SWG\Parameter(name="uid", in="path", required=true, description="成员id", type="integer"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="获取所有部门信息成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="获取所有部门信息失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function memberDepartment($company, $uid) {
+        $id = (integer)($uid);
+        $company = htmlspecialchars($company);
+
+        if (empty($id)) {
+            return $this->errorResponse("用户id不能为空", 406);
+        }
+        if (empty($company)) {
+            return $this->errorResponse("公司代号不能为空", 406);
+        }
+        
+        $user = User::find($id);
+        if (empty($user)) {
+            return $this->errorResponse("请求用户不存在", 406);
+        } else {
+            if ($user['company'] != $company) {
+                return $this->errorResponse("对不起，非法访问", 406);
+            }
+        }
+        
+        $departments = DepartmentMember::findByUser($id);
+        $departmentInfo = array();
+        foreach ($departments as $key=>$department) {
+            $departmentInfo[$key] = Department::findById($department['department']);
+        }
+        return $this->response->array($departmentInfo, new DepartmentTransformer);
+
+    }
+
+}

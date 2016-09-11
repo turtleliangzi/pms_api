@@ -1,0 +1,5 @@
+<?php
+
+// Project Controller Routes
+
+$api->post('/project/add', 'Project\ProjectController@add');

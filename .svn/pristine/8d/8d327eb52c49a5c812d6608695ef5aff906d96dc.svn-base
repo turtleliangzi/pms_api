@@ -1,0 +1,6 @@
+<?php
+
+// Dingding Controller Routes
+
+$api->get('/dingding/access_token', 'Dingding\ContactsController@getAccessToken');
+$api->get('/dingding/department', 'Dingding\ContactsController@getDepartment');

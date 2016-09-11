@@ -1,0 +1,29 @@
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+use DB;
+
+class ProjectMember extends Model {
+
+    protected $table = 'project_member';
+
+    /*
+     * 新增项目成员
+     * @param member
+     */
+
+    protected static function addMember($member) {
+        return ProjectMember::insert($member);
+    }
+
+    /*
+     * 获取项目成员
+     * @param project_id
+     */
+
+    protected static function getMember($project_id) {
+        return ProjectMember::join('users', 'id', '=', 'member')->where('protect', $project_id)->get();
+    }
+}

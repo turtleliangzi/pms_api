@@ -1,0 +1,151 @@
+<?php
+
+namespace App\Api\V1\Controllers\Department;
+
+use App\Api\V1\Controllers\BaseController;
+use App\Department;
+use App\Company;
+use DB;
+use Illuminate\Http\Request;
+use Swagger\Annotations as SWG;
+use App\Api\V1\Transformers\CompanyTransformer;
+
+
+class DepartmentController extends BaseController {
+
+    /** 
+     * @SWG\Post(
+     * path="/department/add",
+     * summary="新建部门",
+     * tags={"Departments"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="department_name", in="query", required=true, description="公司名", type="string"),
+     * @SWG\Parameter(name="department_desc", in="query", required=true, description="英文名", type="string"),
+     * @SWG\Parameter(name="department_creator", in="query", required=true, description="创始人", type="string"),
+     * @SWG\Parameter(name="company", in="query", required=true, description="创始人", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="创建部门成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="创建部门失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function add(Request $request) {
+        $department = array(
+            'department_name' => htmlspecialchars($request->get('department_name')),
+            'department_desc' => htmlspecialchars($request->get('department_desc')),
+            'department_creator' => htmlspecialchars($request->get('department_creator')),
+           'company' => htmlspecialchars($request->get('company')),
+        );
+        if (empty($department['department_name'])) {
+            return $this->errorResponse("部门名不能为空", 406);
+        }
+        if (empty($department['department_creator'])) {
+            return $this->errorResponse("创建人不能为空", 406);
+        }
+        if (empty($department['company'])) {
+            return $this->errorResponse("所属公司不能为空", 406);
+        }
+
+        $companyExist = Company::findCompany($department['company']);
+        if (empty($companyExist)) {
+            return $this->errorResponse("所属公司不存在", 406);
+        }
+
+        $result = Department::create($department);
+        if (!empty($result)) {
+            return $this->successResponse("创建部门成功", 200);
+        } else {
+            return $this->errorResponse("创建部门失败", 500);
+        }
+
+    }
+
+
+    /** 
+     * @SWG\Post(
+     * path="/department/join",
+     * summary="加入公司",
+     * tags={"Departments"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="company_code", in="query", required=true, description="公司代号", type="string"),
+     * @SWG\Parameter(name="member", in="query", required=true, description="加入成员", type="integer"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="加入公司成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="加入公司失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function join(Request $request) {
+        $company = array(
+            'company' => htmlspecialchars($request->get('company_code'))
+        );
+        $uid = (integer)($request->get('member'));
+        if (empty($company['company'])) {
+            return $this->errorResponse("公司代号不能为空", 406);
+        }
+        if (empty($uid)) {
+            return $this->errorResponse("加入成员不能为空", 406);
+        }
+
+        $companyExist = Company::findCompany($company['company']);
+        if (empty($companyExist)) {
+            return $this->errorResponse("该公司不存在", 406);
+        }
+
+        $userExist = User::find($uid);
+        if (empty($userExist)) {
+            return $this->errorResponse("该成员不存在", 406);
+        }
+
+        $result = DB::table('users')->where('id', $uid)->update($company);
+        if ($result) {
+            return $this->successResponse("加入公司成功", 200);
+        } else {
+            return $this->errorResponse("加入公司失败", 500);
+        }
+
+    }
+
+}

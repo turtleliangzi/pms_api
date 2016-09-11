@@ -1,0 +1,52 @@
+<?php
+
+namespace App\Api\V1\Controllers\Company;
+
+use App\Api\V1\Controllers\BaseController;
+use Swagger\Annotations as SWG;
+
+
+class CompanyController extends BaseController {
+    /**
+     * @SWG\Post(
+     *   path="/company/add",
+     *   summary="新建公司",
+     *   tags={"Companys"},
+     *   @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     *   @SWG\Parameter(name="company_name", in="query", required=true, description="公司名", type="string"),
+     *   @SWG\Parameter(name="english_name", in="query", required=true, description="英文名", type="string"),
+     *   @SWG\Parameter(name="company_code", in="query", required=true, description="公司代号", type="string"),
+     *   @SWG\Response(
+     *     response=200,
+     *     description="add successful"
+     *   ),
+     *   @SWG\Response(
+     *     response="default",
+     *     description="an ""unexpected"" error"
+     *   )
+     * )
+     */
+
+    public function add() {
+        return response()->json("company");
+    }
+    /**
+     * @SWG\Post(
+     *   path="/company/join",
+     *   summary="通过公司代号加入公司",
+     *   tags={"Companys"},
+     *   @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     *   @SWG\Parameter(name="company_code", in="query", required=true, description="公司代号", type="string"),
+     *   @SWG\Response(
+     *     response=200,
+     *     description="join successful"
+     *   ),
+     *   @SWG\Response(
+     *     response="default",
+     *     description="an ""unexpected"" error"
+     *   )
+     * )
+     */
+    public function join() {
+    }
+}

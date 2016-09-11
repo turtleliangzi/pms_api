@@ -1,0 +1,46 @@
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+use DB;
+
+class DepartmentMember extends Model {
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'user', 'department'
+    ];
+
+    /**
+     * The attributes excluded from the model's JSON form.
+     *
+     * @var array
+     */
+    protected $hidden = [
+    ];
+
+    protected $table = 'department_member';
+
+
+    /*
+     * 通过用户id获取所在部门信息
+     * @param user
+     */
+    protected static function findByUser($user) {
+        return DepartmentMember::join('departments', 'department', '=', 'department_id')->where('user', $user)->get();
+    }
+
+    /*  
+     * 通过成员id和部门id判断该成员是否在该部门下
+     * @param uid, department_id
+     */
+
+    protected static function findUser($uid, $department_id) {
+        return DepartmentMember::where('user', $uid)->where('department', $department_id)->first();
+    }
+
+}

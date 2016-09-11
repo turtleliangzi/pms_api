@@ -1,0 +1,30 @@
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+use DB;
+
+class ProjectTask extends Model {
+
+    protected $table = 'project_task';
+
+    /*
+     * 新增任务
+     * @param task
+     */
+
+    protected static function addTask($task) {
+        return ProjectTask::insert($task);
+    }
+
+    /*
+     * 通过id获取任务
+     * @param id
+     */
+
+    protected static function getById($id) {
+        return ProjectTask::where('pt_id', $id)->first();
+    }
+}
+

@@ -1,0 +1,615 @@
+<?php
+
+namespace App\Api\V1\Controllers\Project;
+
+use App\Api\V1\Controllers\BaseController;
+use App\Department;
+use App\Company;
+use App\User;
+use App\DepartmentMember;
+use App\Project;
+use App\ProjectGoal;
+use App\ProjectTask;
+use DB;
+use JWTAuth;
+use Illuminate\Http\Request;
+use Swagger\Annotations as SWG;
+use App\Api\V1\Transformers\ProjectTransformer;
+use App\Api\V1\Transformers\DepartmentMemberTransformer;
+use App\Api\V1\Transformers\MemberBasicTransformer;
+
+
+class ProjectController extends BaseController {
+
+    /** 
+     * @SWG\Post(
+     * path="/project/add",
+     * summary="新增项目",
+     * tags={"Projects"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="project_name", in="query", required=true, description="项目名", type="string"),
+     * @SWG\Parameter(name="project_type", in="query", required=true, description="项目类型", type="string"),
+     * @SWG\Parameter(name="project_range", in="query", required=true, description="项目等级", type="string"),
+     * @SWG\Parameter(name="project_desc", in="query", required=true, description="项目描述", type="string"),
+     * @SWG\Parameter(name="etimated_time", in="query", required=true, description="项目预估完成时间", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=404,
+     *   description="用户没找到"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="新增项目成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="新增项目失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function add(Request $request) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse("用户没找到", 404);
+        }
+        $project = array(
+            'project_name' => htmlspecialchars($request->get('project_name')),
+            'project_type' => htmlspecialchars($request->get('project_type')),
+            'project_range' => htmlspecialchars($request->get('project_range')),
+            'project_desc' => htmlspecialchars($request->get('project_desc')),
+            'etimated_time' => htmlspecialchars($request->get('etimated_time')),
+        );
+        $project['company'] = $user['company'];
+        $project['project_applicant'] = $user['name'];
+        if (empty($project['project_name'])) {
+            return $this->errorResponse("项目名不能为空", 406);
+        }
+        if (empty($project['project_type'])) {
+            return $this->errorResponse("项目类型不能为空", 406);
+        }
+        if (empty($project['project_range'])) {
+            return $this->errorResponse("项目等级不能为空", 406);
+        }
+        if (empty($project['etimated_time'])) {
+            return $this->errorResponse("项目预估时间不能为空", 406);
+        }
+
+        $result = Project::create($project);
+        if (!empty($result)) {
+            return $this->successResponse("新增项目成功", 200);
+        } else {
+            return $this->errorResponse("新增项目失败", 500);
+        }
+
+    }
+
+    /** 
+     * @SWG\Get(
+     * path="/project/get/{kind}",
+     * summary="获取未审核/已审核但未分配/已审核且分配/审核不通过的项目",
+     * tags={"Projects"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="kind", in="path", required=true, description="审核状态，0代表未审核，1代表已审核但未分配，2代表已审核且分配，3代表审核不通过", type="integer"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=404,
+     *   description="用户没找到"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="获取成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="获取失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function unaudited($kind) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse("用户没找到", 404);
+        }
+        $kind = (integer)($kind);
+        $company = $user['company'];
+        $unauditedProject = Project::unauditedProject($company, $kind);
+        return $this->response->collection($unauditedProject, new ProjectTransformer);
+
+    }
+
+
+    /** 
+     * @SWG\Post(
+     * path="/project/audit",
+     * summary="审核项目",
+     * tags={"Projects"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="project_id", in="query", required=true, description="项目id", type="integer"),
+     * @SWG\Parameter(name="status", in="query", required=true, description="1审核通过，3审核不通过", type="integer"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=404,
+     *   description="用户没找到"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="审核项目成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="审核项目失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function audit(Request $request) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse("用户没找到", 404);
+        }
+        $company = $user['company'];
+        $auditor = $user['name'];
+        $project_id = (integer)($request->get('project_id'));
+        $status = (integer)($request->get('status'));
+        $project = Project::getById($project_id);
+        if (empty($project)) {
+            return $this->errorResponse("项目不存在", 406);
+        }
+        if ($project['company'] !== $company) {
+            return $this->errorResponse("非法访问", 406);
+        }
+        if (empty($status)) {
+            return $this->errorResponse("请确认是审核通过还是不通过", 406);
+        }
+        $rs = Project::updateAuditStatus($project_id, array("approve_status"=>$status, "auditor" => $auditor));
+        if ($rs === false) {
+            if ($status === 1) {
+                return $this->errorResponse("审核通过失败", 500);
+            } else {
+                return $this->errorResponse("审核不通过失败", 500);
+            }
+        } else {
+            if ($status === 1) {
+                return $this->successResponse("审核通过成功", 200);
+            } else {
+                return $this->successResponse("审核不通过成功", 200);
+            }
+        }
+
+    }
+
+
+    /** 
+     * @SWG\Post(
+     * path="/project/distribute",
+     * summary="项目分配项目经理和产品经理",
+     * tags={"Projects"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="project_id", in="query", required=true, description="项目id", type="integer"),
+     * @SWG\Parameter(name="project_manager", in="query", required=true, description="项目经理email", type="string"),
+     * @SWG\Parameter(name="product_manager", in="query", required=true, description="产品经理email", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=404,
+     *   description="用户没找到"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="分配成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="分配失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function distribute(Request $request) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse("用户没找到", 404);
+        }
+        $company = $user['company'];
+        $project_manager_email = htmlspecialchars($request->get('project_manager'));
+        $product_manager_email = htmlspecialchars($request->get('product_manager'));
+        $project_id = (integer)($request->get('project_id'));
+        if (empty($project_id)) {
+            return $this->errorResponse("项目id不能为空", 406);
+        }
+        if (empty($project_manager_email)) {
+            return $this->errorResponse("项目经理email不能为空", 406);
+        }
+        if (empty($product_manager_email)) {
+            return $this->errorResponse("产品经理email不能为空", 406);
+        }
+        $project = Project::getById($project_id);
+        if (empty($project)) {
+            return $this->errorResponse("项目不存在", 406);
+        }
+        if ($project['company'] !== $company) {
+            return $this->errorResponse("非法访问", 406);
+        }
+        if ($project['approve_status'] != 1) {
+            return $this->errorResponse("该项目不能分配", 406);
+        }
+        $projectManager = User::findUserEmail($project_manager_email);
+        if (empty($projectManager)) {
+            return $this->errorResponse("该项目经理不存在", 406);
+        }
+        if ($projectManager['company'] !== $company) {
+            return $this->errorResponse("公司内不存在该项目经理", 406);
+        }
+        $productManager = User::findUserEmail($product_manager_email);
+        if (empty($productManager)) {
+            return $this->errorResponse("该产品经理不存在", 406);
+        }
+        if ($productManager['company'] !== $company) {
+            return $this->errorResponse("公司内不存在该产品经理", 406);
+        }
+        $product_manager = $productManager['id'];
+        $project_manager = $projectManager['id'];
+        $rs = Project::updateAuditStatus($project_id, array("approve_status"=>2, "project_manager" => $project_manager, "product_manager" => $product_manager));
+        if ($rs === false) {
+            return $this->errorResponse("分配失败", 500);
+        } else {
+            return $this->successResponse("分配成功", 200);
+        }
+
+    }
+    /** 
+     * @SWG\Get(
+     * path="/project/myproject",
+     * summary="获取我的项目",
+     * tags={"Projects"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=404,
+     *   description="用户没找到"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="获取我的项目成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="获取我的项目失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function getMyProject() {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse("用户没找到", 404);
+        }
+
+        $uid = $user['id'];
+        $projects = Project::getMyProject($uid);
+        return $this->response->collection($projects, new ProjectTransformer);
+    }
+
+
+    /** 
+     * @SWG\Post(
+     * path="/project/add_goal",
+     * summary="添加目标",
+     * tags={"Projects"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="project_id", in="query", required=true, description="项目id", type="string"),
+     * @SWG\Parameter(name="goal_name", in="query", required=true, description="目标名", type="string"),
+     * @SWG\Parameter(name="goal_weight", in="query", required=true, description="目标权重", type="string"),
+     * @SWG\Parameter(name="start_time", in="query", required=true, description="开始时间", type="string"),
+     * @SWG\Parameter(name="etimated_end_time", in="query", required=true, description="预计结束时间", type="string"),
+     * @SWG\Parameter(name="goal_order", in="query", required=true, description="执行顺序", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=404,
+     *   description="用户没找到"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="添加目标成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="添加目标失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function addGoal(Request $request) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse("用户没找到", 404);
+        }
+
+        $goal = array(
+            'goal_name' => htmlspecialchars($request->get('goal_name')),
+            'goal_weight' => htmlspecialchars($request->get('goal_weight')),
+            'project' => intval($request->get('project_id')),
+            'start_time' => htmlspecialchars($request->get('start_time')),
+            'etimated_end_time' => htmlspecialchars($request->get('etimated_end_time')),
+            'goal_order' => htmlspecialchars($request->get('goal_order')),
+            'create_time' => date("Y-m-d H:m:s"),
+        );
+        $company = $user['company'];
+        if (empty($goal['goal_name'])) {
+            return $this->errorResponse("目标名不能为空", 406);
+        }
+        if (empty($goal['goal_weight'])) {
+            return $this->errorResponse("目标权重不能为空", 406);
+        }
+        if (empty($goal['project'])) {
+            return $this->errorResponse("项目id不能为空", 406);
+        }
+        if (empty($goal['start_time'])) {
+            return $this->errorResponse("开始时间不能为空", 406);
+        }
+        if (empty($goal['etimated_end_time'])) {
+            return $this->errorResponse("预计结束时间不能为空", 406);
+        }
+        if (empty($goal['goal_order'])) {
+            return $this->errorResponse("目标执行顺序不能为空", 406);
+        }
+        $project = Project::getById($goal['project']);
+        if (empty($project)) {
+            return $this->errorResponse("该项目不存在", 406);
+        }
+        if ($project['company'] !== $company) {
+            return $this->errorResponse("非法访问，该项目不在公司内", 406);
+        }
+        $rs = ProjectGoal::addGoal($goal);
+        if ($rs) {
+            return $this->successResponse("添加目标成功", 200);
+        } else {
+            return $this->errorResponse("添加目标失败", 500);
+        }
+
+    }
+    /** 
+     * @SWG\Post(
+     * path="/project/add_task",
+     * summary="添加任务",
+     * tags={"Projects"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="goal", in="query", required=true, description="阶段目标", type="string"),
+     * @SWG\Parameter(name="task_name", in="query", required=true, description="任务名", type="string"),
+     * @SWG\Parameter(name="task_weight", in="query", required=true, description="任务权重", type="string"),
+     * @SWG\Parameter(name="etimated_time", in="query", required=true, description="任务估时", type="string"),
+     * @SWG\Parameter(name="task_priority", in="query", required=true, description="任务优先级", type="string"),
+     * @SWG\Parameter(name="task_difficulty", in="query", required=true, description="任务难度", type="string"),
+     * @SWG\Parameter(name="task_type", in="query", required=true, description="任务类型", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=404,
+     *   description="用户没找到"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="添加任务成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="添加任务失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function addTask(Request $request) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse("用户没找到", 404);
+        }
+
+        $task = array(
+            'task_name' => htmlspecialchars($request->get('task_name')),
+            'task_weight' => htmlspecialchars($request->get('task_weight')),
+            'goal' => intval($request->get('goal')),
+            'etimated_time' => htmlspecialchars($request->get('etimated_time')),
+            'task_priority' => htmlspecialchars($request->get('task_priority')),
+            'task_difficulty' => htmlspecialchars($request->get('task_difficulty')),
+            'task_type' => htmlspecialchars($request->get('task_type')),
+            'create_time' => date("Y-m-d H:m:s"),
+        );
+        $company = $user['company'];
+        if (empty($task['task_name'])) {
+            return $this->errorResponse("任务名不能为空", 406);
+        }
+        if (empty($task['task_weight'])) {
+            return $this->errorResponse("任务权重不能为空", 406);
+        }
+        if (empty($task['goal'])) {
+            return $this->errorResponse("阶段目标不能为空", 406);
+        }
+        if (empty($task['etimated_time'])) {
+            return $this->errorResponse("预估用时不能为空", 406);
+        }
+        if (empty($task['task_priority'])) {
+            return $this->errorResponse("任务优先级不能为空", 406);
+        }
+        if (empty($task['task_difficulty'])) {
+            return $this->errorResponse("任务难度不能为空", 406);
+        }
+        if (empty($task['task_type'])) {
+            return $this->errorResponse("任务类型不能为空", 406);
+        }
+        $goal = ProjectGoal::getById($task['goal']);
+        if (empty($goal)) {
+            return $this->errorResponse("该阶段目标不存在", 406);
+        }
+        $project = Project::getById($goal['project']);
+        if (empty($project)) {
+            return $this->errorResponse("该项目不存在", 406);
+        }
+        if ($project['company'] !== $company) {
+            return $this->errorResponse("非法访问，该项目不在公司内", 406);
+        }
+        $rs = ProjectTask::addTask($task);
+        if ($rs) {
+            return $this->successResponse("添加任务成功", 200);
+        } else {
+            return $this->errorResponse("添加任务失败", 500);
+        }
+
+    }
+    /** 
+     * @SWG\Get(
+     * path="/project/get/one/{project_id}",
+     * summary="获取单个项目信息",
+     * tags={"Projects"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="project_id", in="path", required=true, description="项目id", type="integer"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=404,
+     *   description="用户没找到"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="添加任务成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="添加任务失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function getOne($project_id) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse("用户没找到", 404);
+        }
+        $project_id = intval($project_id);
+        if (empty($project_id)) {
+            return $this->errorResponse("项目id不能为空", 406);
+        }
+        $company = $user['company'];
+        $project = Project::getById($project_id);
+        if (empty($project)) {
+            return $this->errorResponse("该项目不存在", 406);
+        }
+        if ($project['company'] !== $company) {
+            return $this->errorResponse("非法访问，该项目不在公司内", 406);
+        }
+        if ($project['approve_status'] != 2) {
+            return $this->errorResponse("该项目没有审核通过或审核通过但未分配经理", 406);
+        }
+        return $this->response->item($project, new ProjectTransformer);
+    }
+}

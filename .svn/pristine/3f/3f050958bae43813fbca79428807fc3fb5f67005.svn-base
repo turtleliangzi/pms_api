@@ -1,0 +1,30 @@
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+use DB;
+
+class ProjectGoal extends Model {
+
+    protected $table = 'project_goal';
+
+    /*
+     * 新增目标
+     * @param goal
+     */
+
+    protected static function addGoal($goal) {
+        return ProjectGoal::insert($goal);
+    }
+
+    /*
+     * 通过id获取目标
+     * @param id
+     */
+
+    protected static function getById($id) {
+        return ProjectGoal::where('pg_id', $id)->first();
+    }
+}
+

@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Api\V1\Transformers;
+
+use League\Fractal\TransformerAbstract;
+use App\Department;
+
+class DepartmentTransformer extends TransformerAbstract {
+    
+    public function transform(Department $department) {
+        return [
+            'name' => $company['department_name'],
+            'desc' => $company['department_desc'],
+            'id' => $company['Department_id'],
+        ];
+    }
+}
+
+

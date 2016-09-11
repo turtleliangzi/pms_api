@@ -1,0 +1,63 @@
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+use DB;
+
+class Project extends Model {
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'project_name', 'project_desc', 'project_type', 'company', 'project_range', 'project_applicant', 'etimated_time'
+    ];
+
+    /**
+     * The attributes excluded from the model's JSON form.
+     *
+     * @var array
+     */
+    protected $hidden = [
+    ];
+
+    protected $table = 'projects';
+
+    /*
+     * 获取未审核的项目
+     * @param company
+     */
+
+    protected static function unauditedProject($company, $kind) {
+        return Project::where('company', $company)->where('approve_status', $kind)->get();
+    }
+
+    /*
+     * 通过id 获取项目
+     * @param id
+     */
+
+    protected static function getById($id) {
+        return Project::where('project_id', $id)->first();
+    }
+
+    /*
+     * 更新审核状态
+     * @param id, status
+     */
+
+    protected static function updateAuditStatus($id, $update) {
+        return Project::where('project_id', $id)->update($update);
+    }
+
+    /*
+     * 获取我的项目
+     * @param uid
+     */
+
+    protected static function getMyProject($uid) {
+        return Project::leftJoin('project_member', 'project_id', '=', 'project')->where('member', $uid)->orWhere('project_manager', $uid)->get();
+    }
+}

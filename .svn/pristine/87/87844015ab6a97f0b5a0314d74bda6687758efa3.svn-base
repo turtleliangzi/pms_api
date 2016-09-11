@@ -1,0 +1,36 @@
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+use DB;
+
+class Project extends Model {
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'project_name', 'project_desc', 'project_type', 'company', 'project_range', 'project_applicant', 'etimated_time'
+    ];
+
+    /**
+     * The attributes excluded from the model's JSON form.
+     *
+     * @var array
+     */
+    protected $hidden = [
+    ];
+
+    protected $table = 'projects';
+
+    /*
+     * 获取未审核的项目
+     * @param company
+     */
+
+    protected static function unauditedProject($company, $kind) {
+        return Project::where('company', $company)->where('approve_status', $kind)->get();
+    }
+}

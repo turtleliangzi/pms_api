@@ -1,0 +1,133 @@
+<?php
+
+namespace App\Api\V1\Controllers\UserGroup;
+
+use App\Api\V1\Controllers\BaseController;
+use App\UserGroup;
+use App\User;
+use DB;
+use JWTAuth;
+use Illuminate\Http\Request;
+use Swagger\Annotations as SWG;
+use App\Api\V1\Transformers\UserGroupTransformer;
+
+
+class UserGroupController extends BaseController {
+
+    /** 
+     * @SWG\Post(
+     * path="/group/add",
+     * summary="新建用户组",
+     * tags={"Groups"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="group_name", in="query", required=true, description="用户组名", type="string"),
+     * @SWG\Parameter(name="permissions", in="query", required=true, description="权限", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=404,
+     *   description="用户不存在"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="新增用户组成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="新增用户组失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function add(Request $request) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse("用户没找到", 404);
+        }
+        $group = array(
+            'group_name' => htmlspecialchars($request->get('group_name')),
+            'permission' => json_encode($request->get('permissions')),
+            'company' => $user['company'],
+            'create_time' => date("Y-m-d H:m:s"), 
+            'update_time' => date("Y-m-d H:m:s"), 
+        );
+        if (empty($group['group_name'])) {
+            return $this->errorResponse("用户组名不能为空", 406);
+        }
+        if (empty($group['permission'])) {
+            return $this->errorResponse("权限不能为空", 406);
+        }
+
+        $result = UserGroup::create($group);
+        if (!empty($result)) {
+            return $this->successResponse("新增用户组成功", 200);
+        } else {
+            return $this->errorResponse("新增用户组失败", 500);
+        }
+
+    }
+
+    /** 
+     * @SWG\Get(
+     * path="/group/all",
+     * summary="获取公司下的所有用户组",
+     * tags={"Groups"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=404,
+     *   description="用户不存在"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="获取所有用户组成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="获取所有用户组失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function getAllGroup() {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse("用户没找到", 404);
+        }
+
+        $company = $user['company'];
+
+        $groups = UserGroup::getAllGroup($company);
+        return $this->response->collection($groups, new UserGroupTransformer());
+
+    }
+
+}
+}

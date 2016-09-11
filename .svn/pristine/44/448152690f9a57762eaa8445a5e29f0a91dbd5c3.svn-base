@@ -1,0 +1,6 @@
+<?php
+
+// Department Controller Routes
+
+$api->post('/department/add', 'Department\DepartmentController@add');
+$api->post('/department/join', 'Department\DepartmentController@join');

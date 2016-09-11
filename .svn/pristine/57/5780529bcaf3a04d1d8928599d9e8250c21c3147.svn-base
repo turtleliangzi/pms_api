@@ -1,0 +1,6 @@
+<?php
+
+// UserGroup Controller Routes
+
+$api->post('/group/add', 'UserGroup\UserGroupController@add');
+$api->get('/group/all', 'UserGroup\UserGroupController@getAllGroup');

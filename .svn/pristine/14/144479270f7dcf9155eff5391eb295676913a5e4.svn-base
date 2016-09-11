@@ -1,0 +1,22 @@
+<?php
+
+namespace App\Api\V1\Transformers;
+
+use League\Fractal\TransformerAbstract;
+use App\Folder;
+
+class FolderTransformer extends TransformerAbstract {
+    
+    public function transform(Folder $folder) {
+        return [
+            'name' => $folder['folder_name'],
+            'creator' => $folder['creator'],
+            'parent' => $folder['parent'],
+            'file_path' => $folder['file_path'],
+            'type' => $folder['type'],
+            'update_time' => $folder['update_time'],
+        ];
+    }
+}
+
+

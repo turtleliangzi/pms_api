@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Api\V1\Controllers\Company;
+
+use App\Api\V1\Controllers\BaseController;
+use App\Lesson;
+use Illuminate\Http\Request;
+use Swagger\Annotations as SWG;
+use App\Api\V1\Transformers\LessonTransformer;
+
+
+class CompanyController extends BaseController {
+
+    /** 
+     * @SWG\Post(
+     * path="/company/add",
+     * summary="新建公司",
+     * tags={"Companys"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="company_name", in="query", required=true, description="公司名", type="string"),
+     * @SWG\Parameter(name="english_name", in="query", required=true, description="英文名", type="string"),
+     * @SWG\Parameter(name="company_code", in="query", required=true, description="公司代号", type="string"),
+     * @SWG\Parameter(name="founder", in="query", required=true, description="创始人", type="integer"),
+     * @SWG\Response(
+     *   response=200,
+     *   description="add successful"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function add(Request $request) {
+        $company = $request->only('company_name', 'english_name', 'company_code', 'founder');
+        if (empty($company['company_name'])) {
+            $response = array(
+                'error' => '公司名不能为空',
+                'status' => 406
+            );
+            return response()->json($response);
+        }
+        if (empty($company['english_name'])) {
+            $response = array(
+                'error' => '英文名不能为空',
+                'status' => 406
+            );
+            return response()->json($response);
+        }
+        if (empty($company['company_code'])) {
+            $response = array(
+                'error' => '公司名代号不能为空',
+                'status' => 406
+            );
+            return response()->json($response);
+        }
+        if (empty($company['founder'])) {
+            $response = array(
+                'error' => '创始人不能为空',
+                'status' => 406
+            );
+            return response()->json($response);
+        }
+
+        $result = Company::create($company);
+
+        return response()->json($result);
+    }
+
+}

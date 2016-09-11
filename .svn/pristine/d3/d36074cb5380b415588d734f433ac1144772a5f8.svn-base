@@ -1,0 +1,14 @@
+<?php
+
+// Project Controller Routes
+
+$api->post('/project/add', 'Project\ProjectController@add');
+$api->get('/project/get/{kind}', 'Project\ProjectController@unaudited');
+$api->post('/project/audit', 'Project\ProjectController@audit');
+$api->post('/project/distribute', 'Project\ProjectController@distribute');
+$api->get('/project/myproject', 'Project\ProjectController@getMyProject');
+$api->post('/project/add_goal', 'Project\ProjectController@addGoal');
+$api->post('/project/add_task', 'Project\ProjectController@addTask');
+$api->get('/project/get/one/{project_id}', 'Project\ProjectController@getOne');
+$api->get('/project/get/goal/all/{project_id}', 'Project\ProjectController@getGoalAll');
+$api->post('/project/add_member', 'Project\ProjectController@addMember');

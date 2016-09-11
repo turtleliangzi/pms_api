@@ -1,0 +1,22 @@
+<?php
+
+namespace App\Api\V1\Transformers;
+
+use League\Fractal\TransformerAbstract;
+use App\goalGoal;
+
+class ProjectGoalTransformer extends TransformerAbstract {
+    
+    public function transform(goalGoal $goal) {
+        return [
+            'id' => $goal['pg_id'],
+            'name' => $goal['goal_name'],
+            'weight' => $goal['goal_weight'],
+            'start_time' => $goal['start_time'],
+            'etimated_end_time' => $goal['etimated_end_time'],
+            'order' => $goal['order'],
+        ];
+    }
+}
+
+

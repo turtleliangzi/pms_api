@@ -1,0 +1,54 @@
+<?php
+
+namespace App;
+
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use DB;
+
+class User extends Authenticatable
+{
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'name', 'email', 'password',
+    ];
+
+    /**
+     * The attributes excluded from the model's JSON form.
+     *
+     * @var array
+     */
+    protected $hidden = [
+        'password', 'remember_token',
+    ];
+    
+    /*
+     * 通过邮箱获取用户
+     * @pram email
+     */
+
+    protected static function  findUserEmail($email) {
+        return  User::where('email', $email)->first();
+    }
+
+    /*
+     * 通过公司和姓名判断用户是否存在
+     * @param compnay, name
+     */
+
+    protected static function findUserName($company, $name) {
+        return User::where('company', $company)->where('name', $name)->first();
+    }
+
+    /*
+     * 获取公司成员信息
+     * @param compnay
+     */
+
+    protected static function compnayMember($company) {
+        return User::leftJoin('department_member', 'user', '=', 'id')->join('department', 'department', '=', 'department_id')->where('users.company', $company)->get();
+    }
+}

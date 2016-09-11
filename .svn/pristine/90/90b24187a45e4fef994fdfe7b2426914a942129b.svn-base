@@ -1,0 +1,10 @@
+<?php
+
+// Department Controller Routes
+
+$api->post('/department/add', 'Department\DepartmentController@add');
+$api->get('/department/one/info/{company}/{department_id}', 'Department\DepartmentController@oneInfo');
+$api->post('/department/add/member', 'Department\DepartmentController@addMember');
+$api->get('/department/all/info/{company}/{uid}', 'Department\DepartmentController@allInfo');
+$api->get('/department/member/department/{company}/{uid}', 'Department\DepartmentController@memberDepartment');
+$api->get('/department/member/info/{company}/{uid}/{search?}', 'Department\DepartmentController@memberInfo');

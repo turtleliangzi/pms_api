@@ -1,0 +1,31 @@
+<?php
+
+/*
+ * Dingo Api Routes
+ */
+
+
+
+$api->version('v1', function ($api) {
+    $api->group(['namespace' => 'App\Api\V1\Controllers'], function($api) {
+        /*
+         * include controller routes
+         */
+
+        $dir = '/var/www/dingo/app/Api/V1/Controllers/';
+
+        // Auth Controller Rotues
+        include $dir.'Auth/routes.php';
+        $api->group(['middleware' => 'jwt.auth'], function($api) {
+            $dir = '/var/www/dingo/app/Api/V1/Controllers/';
+
+            // User Controller Routes
+            include $dir.'User/routes.php';
+
+            //Company Controller Routes
+            include $dir.'Company/routes.php';
+
+        });
+    });
+});
+

@@ -1,0 +1,144 @@
+<?php
+
+namespace App\Api\V1\Controllers\Project;
+
+use App\Api\V1\Controllers\BaseController;
+use App\Department;
+use App\Company;
+use App\User;
+use App\DepartmentMember;
+use App\Project;
+use DB;
+use JWTAuth;
+use Illuminate\Http\Request;
+use Swagger\Annotations as SWG;
+use App\Api\V1\Transformers\DepartmentTransformer;
+use App\Api\V1\Transformers\DepartmentMemberTransformer;
+use App\Api\V1\Transformers\MemberBasicTransformer;
+
+
+class ProjectController extends BaseController {
+
+    /** 
+     * @SWG\Post(
+     * path="/project/add",
+     * summary="新增项目",
+     * tags={"Projects"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Parameter(name="project_name", in="query", required=true, description="项目名", type="string"),
+     * @SWG\Parameter(name="project_type", in="query", required=true, description="项目类型", type="string"),
+     * @SWG\Parameter(name="project_range", in="query", required=true, description="项目等级", type="string"),
+     * @SWG\Parameter(name="project_desc", in="query", required=true, description="项目描述", type="string"),
+     * @SWG\Parameter(name="project_applicant", in="query", required=true, description="项目申请人", type="string"),
+     * @SWG\Parameter(name="company", in="query", required=true, description="公司代号", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="新增项目成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="新增项目失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function add(Request $request) {
+        $project = array(
+            'project_name' => htmlspecialchars($request->get('project_name')),
+            'project_type' => htmlspecialchars($request->get('project_type')),
+            'project_range' => htmlspecialchars($request->get('project_range')),
+            'project_desc' => htmlspecialchars($request->get('project_desc')),
+            'project_applicant' => htmlspecialchars($request->get('project_applicant')),
+            'company' => htmlspecialchars($request->get('company')),
+        );
+        if (empty($project['project_name'])) {
+            return $this->errorResponse("项目名不能为空", 406);
+        }
+        if (empty($project['project_type'])) {
+            return $this->errorResponse("项目类型不能为空", 406);
+        }
+        if (empty($project['company'])) {
+            return $this->errorResponse("公司代号不能为空", 406);
+        }
+        if (empty($project['project_range'])) {
+            return $this->errorResponse("项目等级不能为空", 406);
+        }
+        if (empty($project['project_applicant'])) {
+            return $this->errorResponse("项目申请者不能为空", 406);
+        }
+
+        $companyExist = Company::findCompany($project['company']);
+        if (empty($companyExist)) {
+            return $this->errorResponse("公司代号不存在", 406);
+        }
+
+        $userExist = User::findUserName($project['company'], $project['project_applicant']);
+        if (empty($userExist)) {
+            return $this->errorResponse("非法访问，该申请者不在该公司内", 406);
+        }
+
+        $result = Project::create($project);
+        if (!empty($result)) {
+            return $this->successResponse("新增项目成功", 200);
+        } else {
+            return $this->errorResponse("新增项目失败", 500);
+        }
+
+    }
+
+    /** 
+     * @SWG\Get(
+     * path="/project/unaudited",
+     * summary="获取未审核项目",
+     * tags={"Projects"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="新增项目成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="新增项目失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function unaudited() {
+        $user = JWTAuth::parseToken()->authenticate();
+        return response()->json($user);
+
+    }
+
+}

@@ -1,0 +1,5 @@
+<?php
+
+// Company Controller Routes
+
+$api->post('/company/add', 'Company\CompanyController@add');

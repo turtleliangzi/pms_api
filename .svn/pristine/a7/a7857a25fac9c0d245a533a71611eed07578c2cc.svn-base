@@ -1,0 +1,21 @@
+<?php
+
+namespace App\Api\V1\Controllers\Dingding;
+
+use App\Api\V1\Controllers\BaseController;
+use App\Dingding;
+
+
+class ContactsController extends BaseController {
+
+    /*
+     * 主动调用获取access_token
+     * @author turtle
+     * create_time 2016-08-03
+     */
+
+    public function getAccessToken() {
+        $rs = Dingding::getAccessToken();
+        var_dump($rs);
+    }
+}

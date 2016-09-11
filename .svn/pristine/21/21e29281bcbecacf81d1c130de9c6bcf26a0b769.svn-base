@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Api\V1\Controllers\Push;
+
+use App\Api\V1\Controllers\BaseController;
+use App\Company;
+use App\User;
+use App\ProjectMember;
+use DB;
+use JWTAuth;
+use Illuminate\Http\Request;
+use Swagger\Annotations as SWG;
+use App\Api\V1\Transformers\CompanyTransformer;
+use App\Api\V1\Transformers\CompanyMemberTransformer;
+use Illuminate\Support\Arr;
+
+
+class PushController extends BaseController {
+
+    /** 
+     * @SWG\Get(
+     * path="/push/task/undone",
+     * summary="获取项目成员还未完成的任务",
+     * tags={"Pushs"},
+     * @SWG\Parameter(name="Authorization", in="header", required=true, description="用户凭证", type="string"),
+     * @SWG\Response(
+     *   response=401,
+     *   description="token过期"
+     * ),
+     * @SWG\Response(
+     *   response=400,
+     *   description="token无效"
+     * ),
+     * @SWG\Response(
+     *   response=404,
+     *   description="用户不存在"
+     * ),
+     * @SWG\Response(
+     *   response=406,
+     *   description="无效的请求值"
+     * ),
+     * @SWG\Response(
+     *   response=200,
+     *   description="获取成功"
+     * ),
+     * @SWG\Response(
+     *   response=500,
+     *   description="获取失败"
+     * ),
+     * @SWG\Response(
+     *   response="default",
+     *   description="an ""unexpected"" error"
+     * )
+     * )
+     */
+
+    public function getUndoneTask(Request $request) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return $this->errorResponse("用户没找到", 404);
+        }
+        $company = $user['company'];
+        $members = ProjectMember::getProjectMember($company);
+        /* $members = json_decode($members); */
+        /* $members = (array)($members); */
+        foreach($members as $k=>$member) {
+            $members[$k] = (array)($member);
+        }
+        echo $members[0]['pm_id'];
+        /* return $members; */
+    }
+}

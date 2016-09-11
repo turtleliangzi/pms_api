@@ -1,0 +1,5 @@
+<?php
+
+// Demand Controller Routes
+
+$api->post('/demand/add', 'Demand\DemandController@add');
